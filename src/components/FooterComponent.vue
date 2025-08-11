@@ -1,5 +1,5 @@
 <template>
-  <footer class="bg-red-600 text-white py-8">
+  <footer class="bg-blue-600 text-white py-8">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-8">
 
       <!-- Información -->
@@ -15,7 +15,6 @@
         <h4 class="font-semibold mb-3">Navegación</h4>
         <ul>
           <li><RouterLink to="/" class="hover:underline">Inicio</RouterLink></li>
-          <li><RouterLink to="/productos" class="hover:underline">Productos</RouterLink></li>
           <li><RouterLink to="/cupones" class="hover:underline">Cupones</RouterLink></li>
           <li><RouterLink to="/contacto" class="hover:underline">Contacto</RouterLink></li>
         </ul>

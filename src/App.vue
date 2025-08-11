@@ -1,19 +1,24 @@
 <script setup lang="ts">
-import { RouterView } from 'vue-router'
-import HeaderComponent from '@/components/HeaderComponent.vue'
-import FooterComponent from '@/components/FooterComponent.vue'
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+
+// Importa tus layouts
+import UserLayout from '@/layouts/UserLayout.vue'
+import AdminLayout from '@/layouts/admin/AdminLayout.vue'
+
+
+const route = useRoute()
+
+// Determina qué layout usar según la ruta
+const layoutComponent = computed(() => {
+  const layout = route.meta.layout
+  if (layout === 'admin') return AdminLayout
+  return UserLayout // Por defecto
+})
 </script>
 
 <template>
-  <div class="flex flex-col min-h-screen">
-    <HeaderComponent />
-    <main class="flex-grow">
-      <RouterView />
-    </main>
-    <FooterComponent />
-  </div>
+  <component :is="layoutComponent">
+    <RouterView />
+  </component>
 </template>
-
-<style scoped>
-/* Puedes agregar estilos globales aquí si quieres */
-</style>
