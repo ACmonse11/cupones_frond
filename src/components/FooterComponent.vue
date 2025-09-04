@@ -1,5 +1,5 @@
 <template>
-  <footer class="bg-blue-600 text-white py-8">
+  <footer class="bg-blue-600 text-white py-4">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-8">
 
       <!-- Información -->
@@ -16,7 +16,9 @@
         <ul>
           <li><RouterLink to="/" class="hover:underline">Inicio</RouterLink></li>
           <li><RouterLink to="/cupones" class="hover:underline">Cupones</RouterLink></li>
-          <li><RouterLink to="/contacto" class="hover:underline">Contacto</RouterLink></li>
+          <li><RouterLink to="/descuentos" class="hover:underline">Descuentos</RouterLink></li>
+          <li><RouterLink to="/contactanos" class="hover:underline">Contacto</RouterLink></li>
+          <li><RouterLink to="/noticias" class="hover:underline">noticias</RouterLink></li>
         </ul>
       </div>
 

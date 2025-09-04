@@ -5,7 +5,7 @@ import { useRoute } from 'vue-router'
 // Importa tus layouts
 import UserLayout from '@/layouts/UserLayout.vue'
 import AdminLayout from '@/layouts/admin/AdminLayout.vue'
-
+import EmptyLayout from '@/layouts/EmptyLayout.vue'
 
 const route = useRoute()
 
@@ -13,7 +13,8 @@ const route = useRoute()
 const layoutComponent = computed(() => {
   const layout = route.meta.layout
   if (layout === 'admin') return AdminLayout
-  return UserLayout // Por defecto
+  if (layout === 'user') return UserLayout
+  return EmptyLayout // Para login/registro u otras rutas sin layout
 })
 </script>
 
