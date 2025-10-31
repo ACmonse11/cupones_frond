@@ -6,7 +6,7 @@
       <!-- Formulario -->
       <div>
         <h1
-          class="text-4xl sm:text-5xl font-serif text-blue-600 mb-8 animate-fade-in text-center lg:text-left"
+          class="text-4xl sm:text-5xl font-bold text-[#276796] mb-8 animate-fade-in text-center lg:text-left"
         >
           Contáctanos
         </h1>
@@ -14,7 +14,7 @@
         <form @submit.prevent="enviarFormulario" class="space-y-6" novalidate>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label for="nombre" class="block text-sm font-semibold text-blue-700 mb-1">
+              <label for="nombre" class="block text-sm font-semibold text-[#276796] mb-1">
                 Nombre completo
               </label>
               <input
@@ -31,7 +31,7 @@
             </div>
 
             <div>
-              <label for="correo" class="block text-sm font-semibold text-blue-700 mb-1">
+              <label for="correo" class="block text-sm font-semibold text-[#276796] mb-1">
                 Correo electrónico
               </label>
               <input
@@ -49,7 +49,7 @@
           </div>
 
           <div>
-            <label for="asunto" class="block text-sm font-semibold text-blue-700 mb-1">
+            <label for="asunto" class="block text-sm font-semibold text-[#276796] mb-1">
               Asunto
             </label>
             <input
@@ -66,7 +66,7 @@
           </div>
 
           <div>
-            <label for="mensaje" class="block text-sm font-semibold text-blue-700 mb-1">
+            <label for="mensaje" class="block text-sm font-semibold text-[#276796] mb-1">
               Mensaje
             </label>
             <textarea
@@ -85,7 +85,7 @@
           <button
             type="submit"
             :disabled="loading"
-            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition duration-300 flex items-center justify-center gap-2"
+            class="w-full bg-[#276796] hover:bg-blue-500 text-white font-bold py-3 rounded-lg transition duration-300 flex items-center justify-center gap-2"
           >
             <span
               v-if="loading"

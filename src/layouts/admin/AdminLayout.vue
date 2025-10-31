@@ -10,8 +10,7 @@ const menuItems = [
   { label: 'Inicio', icon: HomeIcon, path: '/admin/dashboard' },
   { label: 'Usuarios', icon: UserRound, path: '/admin/usuarios' },
   { label: 'Cupones', icon: TagIcon, path: '/admin/cupones' },
-  { label: 'Categorías', icon: LayersIcon, path: '/admin/categorias' },
-  { label: 'Descuentos', icon: DollarSign, path: '/admin/descuentos' }
+  { label: 'Categorías', icon: LayersIcon, path: '/admin/categorias' }
 ]
 
 const activeTab = ref(menuItems[0].label)

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, watch, onMounted } from 'vue'
-import { UserPlus, Pencil, Trash2, ChevronLeft, ChevronRight, Search, CheckCircle, XCircle } from 'lucide-vue-next'
+import { UserPlus, Pencil, Trash2, ChevronLeft, ChevronRight, Search } from 'lucide-vue-next'
+import { getUsers, createUser, updateUser, deleteUser } from '@/api/users'
 
 // ===== Tipos =====
 interface User {
@@ -9,10 +10,10 @@ interface User {
   email: string
   role: 'Administrador' | 'Editor' | 'Cliente'
   status: 'Activo' | 'Inactivo'
-  lastLogin: string // ISO
+  last_login?: string
 }
 
-type SortKey = keyof Pick<User, 'name' | 'email' | 'role' | 'status' | 'lastLogin'>
+type SortKey = keyof Pick<User, 'name' | 'email' | 'role' | 'status' | 'last_login'>
 
 // ===== Estado =====
 const users = ref<User[]>([])
@@ -29,52 +30,66 @@ const pageSize = ref(10)
 const sortBy = ref<SortKey>('name')
 const sortDir = ref<'asc' | 'desc'>('asc')
 
-const selectedIds = ref<Set<number>>(new Set())
-
-// ===== Datos de prueba (reemplaza por tu API) =====
-function seed() {
-  const base: User[] = [
-    { id: 1, name: 'Ana García', email: 'ana@example.com', role: 'Administrador', status: 'Activo', lastLogin: '2025-08-10T12:20:00Z' },
-    { id: 2, name: 'Luis Pérez', email: 'luis@example.com', role: 'Editor', status: 'Activo', lastLogin: '2025-08-14T09:05:00Z' },
-    { id: 3, name: 'María López', email: 'maria@example.com', role: 'Cliente', status: 'Inactivo', lastLogin: '2025-07-29T19:40:00Z' },
-    { id: 4, name: 'Carlos Ruiz', email: 'carlos@example.com', role: 'Editor', status: 'Activo', lastLogin: '2025-08-15T16:00:00Z' },
-    { id: 5, name: 'Noely Aguilar', email: 'noely@example.com', role: 'Cliente', status: 'Activo', lastLogin: '2025-08-12T21:12:00Z' },
-  ]
-  // duplicamos para paginación
-  let id = 6
-  while (base.length < 38) {
-    base.push({
-      id: id++,
-      name: `Usuario ${id}`,
-      email: `usuario${id}@mail.com`,
-      role: (['Administrador', 'Editor', 'Cliente'] as const)[Math.floor(Math.random()*3)],
-      status: (['Activo', 'Inactivo'] as const)[Math.floor(Math.random()*2)],
-      lastLogin: new Date(Date.now() - Math.floor(Math.random()*60)*86400000).toISOString(),
-    })
-  }
-  users.value = base
-}
-
+// ===== Funciones API =====
 async function fetchUsers() {
   loading.value = true
   error.value = null
   try {
-    // Ejemplo con fetch:
-    // const res = await fetch('/api/users')
-    // users.value = await res.json()
-    await new Promise(r => setTimeout(r, 300))
-    seed()
+    const { data } = await getUsers()
+    users.value = data
   } catch (e: any) {
-    error.value = e?.message ?? 'Error al cargar usuarios'
+    console.error('Error al cargar usuarios', e)
+    error.value = 'No se pudieron cargar los usuarios.'
   } finally {
     loading.value = false
   }
 }
 
-onMounted(fetchUsers)
+async function save() {
+  if (!form.name?.trim() || !form.email?.trim()) {
+    return alert('Nombre y correo son obligatorios')
+  }
+
+  try {
+    if (isEditing.value && form.id) {
+      const { data } = await updateUser(form.id, form)
+      const index = users.value.findIndex(u => u.id === data.id)
+      if (index !== -1) users.value[index] = data
+      alert('✅ Usuario actualizado correctamente')
+    } else {
+      // 🔹 Asignamos contraseña por defecto si no se manda
+      const payload = {
+        ...form,
+        password: '123456'
+      }
+      const { data } = await createUser(payload)
+      users.value.unshift(data)
+      alert('✅ Usuario creado correctamente (Contraseña: 123456)')
+    }
+    showModal.value = false
+  } catch (e: any) {
+    console.error('Error al guardar usuario', e)
+    const msg = e.response?.data?.error || e.response?.data?.details || e.message
+    alert('❌ Error al guardar usuario: ' + msg)
+  }
+}
+
+async function remove(u: User) {
+  if (!confirm(`¿Eliminar a ${u.name}?`)) return
+  try {
+    await deleteUser(u.id)
+    users.value = users.value.filter(x => x.id !== u.id)
+    alert('🗑️ Usuario eliminado correctamente')
+  } catch (e: any) {
+    console.error('Error al eliminar usuario', e)
+    const msg = e.response?.data?.error || e.response?.data?.details || e.message
+    alert('❌ No se pudo eliminar el usuario: ' + msg)
+  }
+}
 
 // ===== Utilidades =====
-function formatDate(iso: string) {
+function formatDate(iso: string | undefined) {
+  if (!iso) return '—'
   try {
     return new Date(iso).toLocaleString()
   } catch {
@@ -82,25 +97,16 @@ function formatDate(iso: string) {
   }
 }
 
-function getInitials(name: string) {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map(n => n[0]!.toUpperCase())
-    .join('')
+function setSort(key: SortKey) {
+  if (sortBy.value === key) {
+    sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    sortBy.value = key
+    sortDir.value = 'asc'
+  }
 }
 
-function toggleAllOnPage(check: boolean) {
-  paged.value.forEach(u => {
-    if (check) selectedIds.value.add(u.id)
-    else selectedIds.value.delete(u.id)
-  })
-}
-
-const anySelected = computed(() => selectedIds.value.size > 0)
-
-// ===== Filtro + Búsqueda + Orden =====
+// ===== Filtros y Paginación =====
 const filtered = computed(() => {
   const query = q.value.trim().toLowerCase()
   return users.value.filter(u => {
@@ -118,7 +124,7 @@ const sorted = computed(() => {
     const B: any = b[sortBy.value]
     if (A === B) return 0
     const dir = sortDir.value === 'asc' ? 1 : -1
-    if (sortBy.value === 'lastLogin') {
+    if (sortBy.value === 'last_login') {
       return (new Date(A).getTime() - new Date(B).getTime()) * dir
     }
     return (A > B ? 1 : -1) * dir
@@ -126,16 +132,6 @@ const sorted = computed(() => {
   return arr
 })
 
-function setSort(key: SortKey) {
-  if (sortBy.value === key) {
-    sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc'
-  } else {
-    sortBy.value = key
-    sortDir.value = 'asc'
-  }
-}
-
-// ===== Paginación =====
 const total = computed(() => sorted.value.length)
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / pageSize.value)))
 
@@ -151,10 +147,15 @@ watch([q, roleFilter, statusFilter, pageSize], () => {
 function prevPage() { if (page.value > 1) page.value-- }
 function nextPage() { if (page.value < totalPages.value) page.value++ }
 
-// ===== CRUD (mock) =====
+// ===== Modal =====
 const showModal = ref(false)
 const isEditing = ref(false)
-const form = reactive<Partial<User>>({ name: '', email: '', role: 'Cliente', status: 'Activo' })
+const form = reactive<Partial<User>>({
+  name: '',
+  email: '',
+  role: 'Cliente',
+  status: 'Activo'
+})
 
 function openCreate() {
   isEditing.value = false
@@ -168,46 +169,9 @@ function openEdit(u: User) {
   showModal.value = true
 }
 
-function save() {
-  // Validación simple
-  if (!form.name?.trim() || !form.email?.trim()) return alert('Nombre y correo son obligatorios')
-  if (isEditing.value && typeof form.id === 'number') {
-    const idx = users.value.findIndex(u => u.id === form.id)
-    if (idx !== -1) users.value[idx] = { ...(users.value[idx]), ...(form as User) }
-  } else {
-    const id = Math.max(0, ...users.value.map(u => u.id)) + 1
-    users.value.unshift({
-      id,
-      name: form.name!,
-      email: form.email!,
-      role: (form.role as User['role']) ?? 'Cliente',
-      status: (form.status as User['status']) ?? 'Activo',
-      lastLogin: new Date().toISOString(),
-    })
-  }
-  showModal.value = false
-}
-
-function remove(u: User) {
-  if (confirm(`¿Eliminar a ${u.name}?`)) {
-    users.value = users.value.filter(x => x.id !== u.id)
-    selectedIds.value.delete(u.id)
-  }
-}
-
-function bulkRemove() {
-  if (!anySelected.value) return
-  if (confirm(`¿Eliminar ${selectedIds.value.size} usuario(s) seleccionados?`)) {
-    users.value = users.value.filter(u => !selectedIds.value.has(u.id))
-    selectedIds.value.clear()
-  }
-}
-
-function bulkSetStatus(status: User['status']) {
-  users.value = users.value.map(u => selectedIds.value.has(u.id) ? { ...u, status } : u)
-  selectedIds.value.clear()
-}
+onMounted(fetchUsers)
 </script>
+
 
 <template>
   <AdminLayout>
@@ -219,14 +183,14 @@ function bulkSetStatus(status: User['status']) {
           <p class="text-sm text-gray-500">Administra cuentas, roles y estado de acceso.</p>
         </div>
         <div class="flex items-center gap-2">
-          <button @click="openCreate" class="inline-flex items-center gap-2 rounded-2xl px-4 py-2 bg-blue-600 text-white hover:bg-indigo-700 transition shadow">
+          <button @click="openCreate" class="inline-flex items-center gap-2 rounded-2xl px-4 py-2 bg-[#276796] text-white hover:bg-[#134A00] transition shadow">
             <UserPlus class="w-4 h-4" />
             <span>Nuevo usuario</span>
           </button>
         </div>
       </div>
 
-      <!-- Filtros y búsqueda -->
+      <!-- Filtros -->
       <div class="mt-6 grid grid-cols-1 md:grid-cols-4 gap-3">
         <div class="md:col-span-2">
           <div class="flex items-center gap-2 rounded-2xl border border-gray-200 bg-white px-3 py-2 shadow-sm">
@@ -247,72 +211,40 @@ function bulkSetStatus(status: User['status']) {
         </select>
       </div>
 
-      <!-- Barra de acciones en lote -->
-      <div v-if="anySelected" class="mt-4 flex flex-wrap items-center gap-2 rounded-2xl bg-gray-50 border border-gray-200 p-3">
-        <span class="text-sm">Seleccionados: {{ selectedIds.size }}</span>
-        <button @click="bulkSetStatus('Activo')" class="text-sm inline-flex items-center gap-1 rounded-xl px-3 py-1 bg-white border border-gray-200 shadow-sm">
-          <CheckCircle class="w-4 h-4" /> Activar
-        </button>
-        <button @click="bulkSetStatus('Inactivo')" class="text-sm inline-flex items-center gap-1 rounded-xl px-3 py-1 bg-white border border-gray-200 shadow-sm">
-          <XCircle class="w-4 h-4" /> Desactivar
-        </button>
-        <button @click="bulkRemove" class="text-sm inline-flex items-center gap-1 rounded-xl px-3 py-1 bg-white border border-red-200 text-red-600 shadow-sm">
-          <Trash2 class="w-4 h-4" /> Eliminar
-        </button>
-      </div>
-
       <!-- Tabla -->
       <div class="mt-4 rounded-2xl border border-gray-200 overflow-hidden bg-white shadow-sm">
         <div class="overflow-x-auto">
           <table class="min-w-full text-sm">
             <thead class="bg-gray-50 text-gray-600">
               <tr>
-                <th class="px-4 py-3 w-10">
-                  <input type="checkbox" :checked="paged.every(u => selectedIds.has(u.id)) && paged.length > 0" @change="toggleAllOnPage(($event.target as HTMLInputElement).checked)" />
-                </th>
                 <th class="px-4 py-3 text-left cursor-pointer" @click="setSort('name')">Nombre</th>
                 <th class="px-4 py-3 text-left cursor-pointer" @click="setSort('email')">Correo</th>
                 <th class="px-4 py-3 text-left cursor-pointer" @click="setSort('role')">Rol</th>
                 <th class="px-4 py-3 text-left cursor-pointer" @click="setSort('status')">Estado</th>
-                <th class="px-4 py-3 text-left cursor-pointer" @click="setSort('lastLogin')">Último acceso</th>
+                <th class="px-4 py-3 text-left cursor-pointer" @click="setSort('last_login')">Último acceso</th>
                 <th class="px-4 py-3 w-12">Acciones</th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="loading">
-                <td colspan="7" class="px-4 py-8 text-center text-gray-500">Cargando…</td>
+                <td colspan="6" class="px-4 py-8 text-center text-gray-500">Cargando…</td>
               </tr>
               <tr v-else-if="error">
-                <td colspan="7" class="px-4 py-8 text-center text-red-600">{{ error }}</td>
+                <td colspan="6" class="px-4 py-8 text-center text-red-600">{{ error }}</td>
               </tr>
               <tr v-else-if="!paged.length">
-                <td colspan="7" class="px-4 py-8 text-center text-gray-500">Sin resultados</td>
+                <td colspan="6" class="px-4 py-8 text-center text-gray-500">Sin resultados</td>
               </tr>
               <tr v-for="u in paged" :key="u.id" class="border-t border-gray-100 hover:bg-gray-50">
-                <td class="px-4 py-3">
-                  <input type="checkbox" :checked="selectedIds.has(u.id)" @change="($event) => { const c = ($event.target as HTMLInputElement).checked; c ? selectedIds.add(u.id) : selectedIds.delete(u.id) }" />
-                </td>
-                <td class="px-4 py-3">
-                  <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-2xl bg-gray-100 flex items-center justify-center font-semibold">{{ getInitials(u.name) }}</div>
-                    <div class="font-medium">{{ u.name }}</div>
-                  </div>
-                </td>
+                <td class="px-4 py-3 font-medium">{{ u.name }}</td>
                 <td class="px-4 py-3 text-gray-600">{{ u.email }}</td>
+                <td class="px-4 py-3">{{ u.role }}</td>
                 <td class="px-4 py-3">
-                  <span class="inline-flex items-center rounded-xl border px-2 py-0.5 text-xs" :class="{
-                    'border-purple-200 bg-purple-50 text-purple-700': u.role === 'Administrador',
-                    'border-blue-200 bg-blue-50 text-blue-700': u.role === 'Editor',
-                    'border-gray-200 bg-gray-50 text-gray-700': u.role === 'Cliente',
-                  }">{{ u.role }}</span>
-                </td>
-                <td class="px-4 py-3">
-                  <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium" :class="u.status === 'Activo' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-amber-50 text-amber-700 border border-amber-200'">
-                    <span class="inline-block w-1.5 h-1.5 rounded-full" :class="u.status === 'Activo' ? 'bg-green-600' : 'bg-amber-600'"></span>
+                  <span class="px-3 py-1 rounded-full text-xs font-medium" :class="u.status === 'Activo' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'">
                     {{ u.status }}
                   </span>
                 </td>
-                <td class="px-4 py-3 text-gray-600">{{ formatDate(u.lastLogin) }}</td>
+                <td class="px-4 py-3 text-gray-600">{{ formatDate(u.last_login) }}</td>
                 <td class="px-2 py-2">
                   <div class="flex items-center justify-end gap-1">
                     <button @click="openEdit(u)" class="p-2 rounded-xl hover:bg-gray-100" title="Editar">
@@ -327,74 +259,44 @@ function bulkSetStatus(status: User['status']) {
             </tbody>
           </table>
         </div>
-
-        <!-- Pie de tabla: paginación y tamaño de página -->
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 p-3 border-t border-gray-100 bg-white">
-          <div class="text-sm text-gray-600">Mostrando
-            <span class="font-medium"> {{ paged.length ? (page - 1) * pageSize + 1 : 0 }} </span>
-            -
-            <span class="font-medium"> {{ (page - 1) * pageSize + paged.length }} </span>
-            de <span class="font-medium">{{ total }}</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <select v-model.number="pageSize" class="rounded-xl border border-gray-200 bg-white px-3 py-1.5 text-sm shadow-sm">
-              <option :value="5">5</option>
-              <option :value="10">10</option>
-              <option :value="20">20</option>
-              <option :value="50">50</option>
-            </select>
-            <div class="flex items-center gap-1">
-              <button @click="prevPage" :disabled="page === 1" class="p-2 rounded-xl border border-gray-200 disabled:opacity-50">
-                <ChevronLeft class="w-4 h-4" />
-              </button>
-              <span class="text-sm">{{ page }} / {{ totalPages }}</span>
-              <button @click="nextPage" :disabled="page === totalPages" class="p-2 rounded-xl border border-gray-200 disabled:opacity-50">
-                <ChevronRight class="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </div>
       </div>
 
-      <!-- Vista móvil (tarjetas) opcional: si quieres, duplica la info en cards con v-show md:hidden -->
-    </div>
-
-    <!-- Modal Crear/Editar -->
-    <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center">
-      <div class="absolute inset-0 bg-black/40" @click="showModal = false"></div>
-      <div class="relative w-[95%] max-w-xl rounded-2xl bg-white shadow-2xl">
-        <div class="p-5 border-b border-gray-100">
-          <h3 class="text-lg font-semibold">{{ isEditing ? 'Editar usuario' : 'Nuevo usuario' }}</h3>
-          <p class="text-sm text-gray-500">Completa la información del usuario.</p>
-        </div>
-        <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="text-sm text-gray-600">Nombre</label>
-            <input v-model="form.name" type="text" class="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200" />
+      <!-- Modal Crear/Editar -->
+      <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/40" @click="showModal = false"></div>
+        <div class="relative w-[95%] max-w-xl rounded-2xl bg-white shadow-2xl">
+          <div class="p-5 border-b border-gray-100">
+            <h3 class="text-lg font-semibold">{{ isEditing ? 'Editar usuario' : 'Nuevo usuario' }}</h3>
           </div>
-          <div>
-            <label class="text-sm text-gray-600">Correo</label>
-            <input v-model="form.email" type="email" class="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200" />
+          <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="text-sm text-gray-600">Nombre</label>
+              <input v-model="form.name" type="text" class="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#276796]" />
+            </div>
+            <div>
+              <label class="text-sm text-gray-600">Correo</label>
+              <input v-model="form.email" type="email" class="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#276796]" />
+            </div>
+            <div>
+              <label class="text-sm text-gray-600">Rol</label>
+              <select v-model="(form.role as User['role'])" class="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm">
+                <option value="Administrador">Administrador</option>
+                <option value="Editor">Editor</option>
+                <option value="Cliente">Cliente</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-sm text-gray-600">Estado</label>
+              <select v-model="(form.status as User['status'])" class="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm">
+                <option value="Activo">Activo</option>
+                <option value="Inactivo">Inactivo</option>
+              </select>
+            </div>
           </div>
-          <div>
-            <label class="text-sm text-gray-600">Rol</label>
-            <select v-model="(form.role as User['role'])" class="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm">
-              <option value="Administrador">Administrador</option>
-              <option value="Editor">Editor</option>
-              <option value="Cliente">Cliente</option>
-            </select>
+          <div class="p-5 flex items-center justify-end gap-2 border-t border-gray-100">
+            <button @click="showModal = false" class="rounded-xl px-4 py-2 border border-gray-200">Cancelar</button>
+            <button @click="save" class="rounded-xl px-4 py-2 bg-[#276796] text-white hover:bg-[#134A00]">Guardar</button>
           </div>
-          <div>
-            <label class="text-sm text-gray-600">Estado</label>
-            <select v-model="(form.status as User['status'])" class="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm">
-              <option value="Activo">Activo</option>
-              <option value="Inactivo">Inactivo</option>
-            </select>
-          </div>
-        </div>
-        <div class="p-5 flex items-center justify-end gap-2 border-t border-gray-100">
-          <button @click="showModal = false" class="rounded-xl px-4 py-2 border border-gray-200">Cancelar</button>
-          <button @click="save" class="rounded-xl px-4 py-2 bg-gray-900 text-white hover:bg-black">Guardar</button>
         </div>
       </div>
     </div>
@@ -402,5 +304,10 @@ function bulkSetStatus(status: User['status']) {
 </template>
 
 <style scoped>
-/* Estilos mínimos extra; Tailwind hace el trabajo pesado */
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+}
 </style>

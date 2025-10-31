@@ -38,7 +38,7 @@ const enviarRecomendacion = () => {
 <template>
   <div class="flex justify-center px-4 py-8">
     <div class="w-full max-w-xl">
-      <h1 class="text-2xl font-serif text-center text-blue-600 mb-6">
+      <h1 class="text-2xl font-bold text-center text-blue-600 mb-6">
         Recomendaciones de la página de cupones
       </h1>
 

@@ -1,103 +1,198 @@
+<script setup lang="ts">
+import { ref, reactive, computed, onMounted } from 'vue'
+import axios from 'axios'
+import { PlusCircle, Pencil, Trash2, Search, ChevronLeft, ChevronRight } from 'lucide-vue-next'
+
+// ====== Tipos ======
+interface Category {
+  id: number
+  name: string
+  description?: string
+  created_at?: string
+}
+
+// ====== Estado ======
+const categories = ref<Category[]>([])
+const loading = ref(false)
+const error = ref<string | null>(null)
+
+const showModal = ref(false)
+const isEditing = ref(false)
+const form = reactive<Partial<Category>>({
+  name: '',
+  description: ''
+})
+
+// ====== URL base del backend ======
+const API_URL = 'http://127.0.0.1:8000/api/categories'
+
+// ====== Funciones CRUD ======
+async function fetchCategories() {
+  loading.value = true
+  error.value = null
+  try {
+    const res = await axios.get(API_URL)
+    categories.value = res.data
+  } catch (err: any) {
+    error.value = err.message
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(fetchCategories)
+
+async function saveCategory() {
+  try {
+    if (!form.name?.trim()) {
+      alert('El nombre es obligatorio')
+      return
+    }
+
+    if (isEditing.value && form.id) {
+      await axios.put(`${API_URL}/${form.id}`, form)
+    } else {
+      await axios.post(API_URL, form)
+    }
+
+    showModal.value = false
+    await fetchCategories()
+  } catch (err: any) {
+    alert('Error al guardar: ' + err.message)
+  }
+}
+
+async function deleteCategory(id: number) {
+  if (!confirm('¿Eliminar esta categoría?')) return
+  try {
+    await axios.delete(`${API_URL}/${id}`)
+    await fetchCategories()
+  } catch (err: any) {
+    alert('Error al eliminar: ' + err.message)
+  }
+}
+
+// ====== Abrir modal ======
+function openCreate() {
+  isEditing.value = false
+  Object.assign(form, { id: undefined, name: '', description: '' })
+  showModal.value = true
+}
+
+function openEdit(category: Category) {
+  isEditing.value = true
+  Object.assign(form, category)
+  showModal.value = true
+}
+
+// ====== Búsqueda y paginación ======
+const q = ref('')
+const filtered = computed(() => {
+  const query = q.value.toLowerCase()
+  return categories.value.filter(c =>
+    c.name.toLowerCase().includes(query) ||
+    c.description?.toLowerCase().includes(query)
+  )
+})
+
+const page = ref(1)
+const pageSize = 10
+const totalPages = computed(() => Math.ceil(filtered.value.length / pageSize))
+const paged = computed(() => filtered.value.slice((page.value - 1) * pageSize, page.value * pageSize))
+
+function nextPage() { if (page.value < totalPages.value) page.value++ }
+function prevPage() { if (page.value > 1) page.value-- }
+</script>
+
 <template>
-  <AdminLayout>
-    <div class="p-4 sm:p-6">
-      <!-- Encabezado -->
-      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <h1 class="text-2xl md:text-3xl font-semibold tracking-tight">Categorías</h1>
-        <button
-          @click="agregarCategoria"
-          class="inline-flex items-center gap-2 rounded-2xl px-4 py-2 bg-blue-600 text-white hover:bg-indigo-700 transition shadow"
-        >
-          + Agregar Categoría
-        </button>
+  <div class="p-6">
+    <!-- Encabezado -->
+    <div class="flex flex-col md:flex-row justify-between items-center mb-6">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800">Gestión de Categorías</h1>
+        <p class="text-gray-500 text-sm">Crea, edita o elimina categorías de cupones.</p>
       </div>
+      <button
+        @click="openCreate"
+        class="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg shadow">
+        <PlusCircle class="w-4 h-4" /> Nueva categoría
+      </button>
+    </div>
 
-      <!-- Grid de Categorías -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-        <div
-          v-for="categoria in categorias"
-          :key="categoria.id"
-          class="bg-white p-4 sm:p-5 rounded-xl shadow-md hover:shadow-xl transition flex flex-col justify-between"
-        >
-          <!-- Encabezado de tarjeta -->
-          <div class="flex items-center gap-3 mb-3">
-            <div
-              class="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-full"
-              :class="categoria.color"
-            >
-              <span class="text-white text-lg font-bold">
-                {{ categoria.icon }}
-              </span>
-            </div>
-            <h2 class="text-base sm:text-lg font-semibold text-gray-700">
-              {{ categoria.nombre }}
-            </h2>
+    <!-- Búsqueda -->
+    <div class="flex items-center mb-4 gap-2 border rounded-lg px-3 py-2 bg-white shadow-sm max-w-md">
+      <Search class="w-4 h-4 text-gray-500" />
+      <input v-model="q" placeholder="Buscar categoría..." class="outline-none w-full text-sm" />
+    </div>
+
+    <!-- Tabla -->
+    <div class="overflow-x-auto bg-white shadow rounded-lg">
+      <table class="min-w-full text-sm">
+        <thead class="bg-gray-50 text-gray-700">
+          <tr>
+            <th class="px-4 py-3 text-left">Nombre</th>
+            <th class="px-4 py-3 text-left">Descripción</th>
+            <th class="px-4 py-3 text-left">Creado el</th>
+            <th class="px-4 py-3 text-center">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-if="loading">
+            <td colspan="4" class="text-center py-6 text-gray-500">Cargando...</td>
+          </tr>
+          <tr v-else-if="error">
+            <td colspan="4" class="text-center py-6 text-red-500">{{ error }}</td>
+          </tr>
+          <tr v-else-if="!paged.length">
+            <td colspan="4" class="text-center py-6 text-gray-500">Sin resultados</td>
+          </tr>
+          <tr v-for="c in paged" :key="c.id" class="border-t hover:bg-gray-50">
+            <td class="px-4 py-3 font-medium">{{ c.name }}</td>
+            <td class="px-4 py-3 text-gray-600">{{ c.description || '—' }}</td>
+            <td class="px-4 py-3 text-gray-500 text-xs">{{ c.created_at ? new Date(c.created_at).toLocaleDateString() : '-' }}</td>
+            <td class="px-4 py-3 flex justify-center gap-2">
+              <button @click="openEdit(c)" class="p-2 hover:bg-gray-100 rounded-lg">
+                <Pencil class="w-4 h-4 text-blue-600" />
+              </button>
+              <button @click="deleteCategory(c.id)" class="p-2 hover:bg-gray-100 rounded-lg">
+                <Trash2 class="w-4 h-4 text-red-600" />
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Paginación -->
+    <div class="flex justify-between items-center mt-4 text-sm">
+      <span class="text-gray-600">Página {{ page }} de {{ totalPages }}</span>
+      <div class="flex gap-2">
+        <button @click="prevPage" :disabled="page === 1" class="px-3 py-1 border rounded disabled:opacity-50">Anterior</button>
+        <button @click="nextPage" :disabled="page === totalPages" class="px-3 py-1 border rounded disabled:opacity-50">Siguiente</button>
+      </div>
+    </div>
+
+    <!-- Modal Crear/Editar -->
+    <div v-if="showModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+      <div class="bg-white rounded-xl w-full max-w-lg shadow-xl">
+        <div class="p-5 border-b">
+          <h2 class="text-lg font-semibold">{{ isEditing ? 'Editar Categoría' : 'Nueva Categoría' }}</h2>
+        </div>
+        <div class="p-5 grid grid-cols-1 gap-4">
+          <div>
+            <label class="text-sm text-gray-700">Nombre</label>
+            <input v-model="form.name" class="w-full border rounded-lg px-3 py-2 text-sm" />
           </div>
-
-          <!-- Descripción -->
-          <p class="text-gray-500 text-sm sm:text-base mb-4">
-            {{ categoria.descripcion }}
-          </p>
-
-          <!-- Botones -->
-          <div class="flex justify-end gap-2 pt-2">
-            <button
-              @click="editarCategoria(categoria)"
-              class="bg-yellow-400 text-white px-3 py-2 rounded-lg hover:bg-yellow-500 transition text-sm sm:text-base"
-            >
-              Editar
-            </button>
-            <button
-              @click="eliminarCategoria(categoria.id)"
-              class="bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600 transition text-sm sm:text-base"
-            >
-              Eliminar
-            </button>
+          <div>
+            <label class="text-sm text-gray-700">Descripción</label>
+            <textarea v-model="form.description" rows="3" class="w-full border rounded-lg px-3 py-2 text-sm"></textarea>
           </div>
         </div>
+        <div class="flex justify-end gap-2 border-t p-4">
+          <button @click="showModal = false" class="px-4 py-2 border rounded-lg">Cancelar</button>
+          <button @click="saveCategory" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Guardar</button>
+        </div>
       </div>
-
-      <!-- Mensaje si no hay categorías -->
-      <p v-if="categorias.length === 0" class="text-center text-gray-400 mt-6">
-        No hay categorías registradas.
-      </p>
     </div>
-  </AdminLayout>
+  </div>
 </template>
-
-<script setup lang="ts">
-import { ref } from 'vue'
-
-interface Categoria {
-  id: number
-  nombre: string
-  descripcion: string
-  color: string
-  icon: string
-}
-
-const categorias = ref<Categoria[]>([
-  {
-    id: 1,
-    nombre: 'Electrónica',
-    descripcion: 'Dispositivos y gadgets electrónicos.',
-    color: 'bg-blue-500',
-    icon: '📱'
-  },
-  {
-    id: 2,
-    nombre: 'Ropa',
-    descripcion: 'Moda y accesorios para todas las edades.',
-    color: 'bg-pink-500',
-    icon: '👗'
-  }
-])
-
-const agregarCategoria = () => alert('Agregar categoría')
-const editarCategoria = (categoria: Categoria) => alert(`Editar: ${categoria.nombre}`)
-const eliminarCategoria = (id: number) => {
-  if (confirm('¿Eliminar esta categoría?')) {
-    categorias.value = categorias.value.filter(c => c.id !== id)
-  }
-}
-</script>

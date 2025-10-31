@@ -1,19 +1,74 @@
 <!-- src/views/DescuentosView.vue -->
+<script setup lang="ts">
+import { ref, computed, onMounted } from "vue";
+import axios from "axios";
+
+interface Category {
+  id: number;
+  name: string;
+}
+
+interface Coupon {
+  id: number;
+  title: string;
+  description: string;
+  discount: number;
+  expiration_date: string;
+  status: "Activo" | "Inactivo";
+  image?: string;
+  category?: Category;
+}
+
+const cupones = ref<Coupon[]>([]);
+const descuentoSeleccionado = ref(0);
+const loading = ref(false);
+const error = ref<string | null>(null);
+
+// ✅ URL del backend Laravel
+const API_URL = "http://127.0.0.1:8000/api/coupons";
+
+// ✅ Cargar cupones desde el backend
+onMounted(async () => {
+  try {
+    loading.value = true;
+    const res = await axios.get(API_URL);
+
+    // Solo cupones activos y con descuento mayor a 0
+    cupones.value = res.data.filter(
+      (c: Coupon) => c.status === "Activo" && c.discount > 0
+    );
+  } catch (err: any) {
+    console.error("Error al cargar cupones:", err);
+    error.value = "No se pudieron cargar los descuentos.";
+  } finally {
+    loading.value = false;
+  }
+});
+
+// ✅ Filtrar por porcentaje seleccionado
+const cuponesFiltrados = computed(() => {
+  if (descuentoSeleccionado.value === 0) return cupones.value;
+  return cupones.value.filter(
+    (c) => c.discount >= descuentoSeleccionado.value
+  );
+});
+</script>
+
 <template>
-  <div class="px-4 py-8 max-w-5xl mx-auto">
-    <h1 class="text-2xl md:text-3xl font-serif mb-8 text-[#69BBF0] text-center">
-      Descuentos Especiales
+  <div class="px-4 py-8 max-w-6xl mx-auto">
+    <h1 class="text-3xl font-bold mb-8 text-[#276796] text-center">
+      💸 Descuentos Especiales
     </h1>
 
-    <!-- Filtro por descuento -->
-    <div class="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-start gap-4">
+    <!-- 🔍 Filtro de descuento -->
+    <div class="mb-8 flex flex-col sm:flex-row sm:items-center gap-4">
       <label for="descuento" class="text-sm font-medium text-gray-700">
-        Selecciona un rango de descuento:
+        Filtrar por rango de descuento:
       </label>
       <select
         id="descuento"
         v-model.number="descuentoSeleccionado"
-        class="block w-full sm:w-60 p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-400"
+        class="block w-full sm:w-60 p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#69BBF0] outline-none"
       >
         <option :value="0">Todos</option>
         <option :value="10">10% o más</option>
@@ -24,109 +79,83 @@
       </select>
     </div>
 
-    <!-- Lista de cupones filtrados -->
-    <div class="grid grid-cols-1 font-medium sm:grid-cols-2 lg:grid-cols-4 gap-6">
+    <!-- Estado de carga -->
+    <div v-if="loading" class="text-center text-gray-500 py-10">
+      Cargando descuentos...
+    </div>
+
+    <!-- Error -->
+    <div v-else-if="error" class="text-center text-red-500 py-10">
+      {{ error }}
+    </div>
+
+    <!-- 🧾 Lista de cupones -->
+    <div
+      v-else-if="cuponesFiltrados.length > 0"
+      class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
+    >
       <div
         v-for="cupon in cuponesFiltrados"
         :key="cupon.id"
         class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden hover:shadow-lg transition transform hover:-translate-y-1 flex flex-col"
       >
-        <img :src="cupon.imagen" alt="Imagen del cupón" class="w-full h-40 object-cover" />
+        <!-- Imagen -->
+        <div class="w-full h-40 bg-gray-100 flex items-center justify-center">
+          <img
+            v-if="cupon.image"
+            :src="cupon.image.startsWith('http')
+              ? cupon.image
+              : `http://127.0.0.1:8000/storage/${cupon.image}`"
+            alt="Imagen del cupón"
+            class="w-full h-40 object-cover"
+          />
+          <span v-else class="text-gray-400 text-sm italic">Sin imagen</span>
+        </div>
+
+        <!-- Contenido -->
         <div class="p-4 flex flex-col flex-1">
           <h2 class="text-lg font-semibold text-gray-800 line-clamp-1">
-            {{ cupon.titulo }}
+            {{ cupon.title }}
           </h2>
           <p class="text-gray-600 mt-1 text-sm line-clamp-2">
-            {{ cupon.descripcion }}
+            {{ cupon.description }}
           </p>
+
           <span
-            class="inline-block mt-3 bg-gray-300 text-blue-800 text-sm font-bold px-3 py-1 rounded-full"
+            class="inline-block mt-3 bg-green-100 text-green-800 text-sm font-bold px-3 py-1 rounded-full"
           >
-            {{ cupon.descuento }}% OFF
+            {{ cupon.discount }}% OFF
           </span>
 
-          <!-- Botón agregar al carrito -->
-          <button
-            @click="agregarAlCarrito(cupon)"
-            class="mt-4 bg-[#69BBF0] hover:bg-blue-500 text-white text-sm font-medium py-2 px-4 rounded-lg shadow transition"
-          >
-            Agregar al carrito
-          </button>
+          <p class="mt-2 text-xs text-gray-500">
+            Vence: {{ new Date(cupon.expiration_date).toLocaleDateString() }}
+          </p>
+
+          <p class="text-xs text-gray-400 mt-auto">
+            {{ cupon.category?.name || "Sin categoría" }}
+          </p>
         </div>
       </div>
     </div>
 
     <!-- Sin resultados -->
-    <div v-if="cuponesFiltrados.length === 0" class="mt-8 text-center text-gray-500 italic">
+    <div v-else class="mt-8 text-center text-gray-500 italic">
       No hay cupones que coincidan con el rango de descuento seleccionado.
-    </div>
-
-    <!-- Carrito -->
-    <div class="mt-12 p-4 border rounded-lg bg-gray-50">
-      <h2 class="text-xl font-semibold text-gray-800 mb-3">🛒 Carrito</h2>
-      <ul v-if="carrito.length > 0" class="list-disc pl-5 space-y-1">
-        <li v-for="(item, index) in carrito" :key="index">
-          {{ item.titulo }} - {{ item.descuento }}% OFF
-        </li>
-      </ul>
-      <p v-else class="text-gray-500 italic">Tu carrito está vacío.</p>
     </div>
   </div>
 </template>
 
-<script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
-
-import imagen23 from "../img/Imagen23.jpg";
-import imagen24 from "../img/Imagen24.jpg";
-import imagen25 from "../img/Imagen25.jpg";
-import imagen26 from "../img/Imagen26.jpg";
-
-const descuentoSeleccionado = ref(0);
-onMounted(() => {
-  window.scrollTo({ top: 0, behavior: "smooth" });
-});
-
-const cupones = ref([
-  {
-    id: 1,
-    titulo: "Descuento en Parque Xtreme Splash",
-    descripcion: "descuento en entradas .",
-    descuento: 30,
-    imagen: imagen23,
-  },
-  {
-    id: 2,
-    titulo: "Restaurante Marisquísimo",
-    descripcion: "2x1 en platillos seleccionados.",
-    descuento: 50,
-    imagen: imagen24,
-  },
-  {
-    id: 3,
-    titulo: "Aquaventuras Cancún",
-    descripcion: "Combo familiar por solo $999.",
-    descuento: 15,
-    imagen: imagen25,
-  },
-  {
-    id: 4,
-    titulo: "Spa Relajación Total",
-    descripcion: "20% de descuento en masajes.",
-    descuento: 20,
-    imagen: imagen26,
-  },
-]);
-
-const cuponesFiltrados = computed(() => {
-  return cupones.value.filter((c) => c.descuento >= descuentoSeleccionado.value);
-});
-
-// --- Carrito ---
-const carrito = ref<any[]>([]);
-
-const agregarAlCarrito = (cupon: any) => {
-  carrito.value.push(cupon);
-  alert(`Agregaste "${cupon.titulo}" al carrito 🎉`);
-};
-</script>
+<style scoped>
+.line-clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+</style>

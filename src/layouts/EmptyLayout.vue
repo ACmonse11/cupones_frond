@@ -1,4 +1,3 @@
-<!-- src/layouts/EmptyLayout.vue -->
 <template>
-  <slot />
+  <RouterView />
 </template>
