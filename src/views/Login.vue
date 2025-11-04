@@ -75,11 +75,13 @@ const handleLogin = async () => {
     alert("Inicio de sesión correcto ✅");
 
     // 🔹 Redirección flexible según rol (sin importar mayúsculas/minúsculas)
-    if (role.includes("admin")) {
-      router.push("/admin/dashboard"); // 👨‍💼 Admin
-    } else {
-      router.push("/"); // 👤 Cliente
-    }
+if (data.user.role === "admin") {
+  router.push("/admin/dashboard");
+} else {
+  router.push("/");
+}
+
+
   } catch (error: any) {
     console.error("Error al iniciar sesión:", error);
     alert(

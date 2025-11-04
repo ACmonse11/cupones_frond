@@ -37,7 +37,7 @@ const closeMenu = () => {
 
       <!-- Botones acción -->
       <div class="flex items-center space-x-3">
-       
+
         <RouterLink
   to="/login"
   class="hidden md:block font-medium bg-[#276796] text-white px-4 py-1 rounded-lg hover:bg-blue-700 transition"
@@ -68,13 +68,10 @@ const closeMenu = () => {
           <RouterLink to="/Noticias" @click="closeMenu" class="hover:text-[#69BBF0] transition">Noticias</RouterLink>
           <RouterLink to="/contactanos" @click="closeMenu" class="hover:text-[#69BBF0] transition">Contacto</RouterLink>
           <!-- Botón login móvil -->
-          <RouterLink
-  to="/login"
-  @click="closeMenu"
-  class="w-full bg-[#69BBF0] text-white py-2 rounded-lg hover:bg-blue-700 transition text-center"
->
+          <router-link to="/login">
   Iniciar sesión
-</RouterLink>
+</router-link>
+
 
         </nav>
       </div>
