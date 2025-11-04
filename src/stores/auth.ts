@@ -3,56 +3,37 @@ import api from '../api/axios'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
-    token: null as string | null,
-    user: null as any,
+    token: null,
+    user: null,
   }),
 
   getters: {
     isAuthenticated: (state) => !!state.token && !!state.user,
-
-    isAdmin: (state) =>
-      String(state.user?.role || '')
-        .toLowerCase()
-        .includes('admin'),
+    isAdmin: (state) => state.user?.role === "admin",
   },
 
   actions: {
-    // ✅ Inicializar sesión desde localStorage
-    initializeAuth() {
-      const token = localStorage.getItem('token')
-      const user = JSON.parse(localStorage.getItem('user') || 'null')
-
-      if (token && user) {
-        this.token = token
-        this.user = user
-        api.defaults.headers.common['Authorization'] = `Bearer ${token}`
-      } else {
-        this.logout()
-      }
-    },
-
-    // ✅ Registro
     async register(name: string, email: string, password: string) {
       const { data } = await api.post('/register', { name, email, password })
       return data
     },
 
-    // ✅ Login
     async login(email: string, password: string) {
       const { data } = await api.post('/login', { email, password })
 
-      this.token = data.access_token || data.token
+      const token = data.access_token || data.token
+
+      this.token = token
       this.user = data.user
 
-      localStorage.setItem('token', this.token)
-      localStorage.setItem('user', JSON.stringify(this.user))
+      localStorage.setItem('token', token)
+      localStorage.setItem('user', JSON.stringify(data.user))
 
-      api.defaults.headers.common['Authorization'] = `Bearer ${this.token}`
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`
 
       return data
     },
 
-    // ✅ Logout
     logout() {
       this.token = null
       this.user = null

@@ -1,106 +1,89 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory } from "vue-router"
 
-// 🧭 Vistas del usuario
-const HomeView = () => import('@/views/HomeView.vue')
-const ContactanosView = () => import('@/views/ContactanosView.vue')
-const CuponesView = () => import('@/views/CuponesView.vue')
-const NoticiasView = () => import('@/views/NoticiasView.vue')
-const DescuentosView = () => import('@/views/DescuentosView.vue')
-const CarritoView = () => import('@/views/CarritoView.vue')
+// Layouts
+import AdminLayout from "@/layouts/admin/AdminLayout.vue"
+import UserLayout from "@/layouts/UserLayout.vue"
 
-// 🧰 Vistas del administrador
-const DashboardView = () => import('@/views/admin/DashboardView.vue')
-const CuponesAdminView = () => import('@/views/admin/CuponesAdminView.vue')
-const CategoriaAdminView = () => import('@/views/admin/CategoriaAdminView.vue')
-const UsuariosAdminView = () => import('@/views/admin/UsuariosAdminView.vue')
-const DescuentosAdminView = () => import('@/views/admin/DescuentosAdminView.vue')
+// User Views
+const HomeView = () => import("@/views/HomeView.vue")
+const CuponesView = () => import("@/views/CuponesView.vue")
+const ContactanosView = () => import("@/views/ContactanosView.vue")
+const NoticiasView = () => import("@/views/NoticiasView.vue")
+const DescuentosView = () => import("@/views/DescuentosView.vue")
+const CarritoView = () => import("@/views/CarritoView.vue")
 
-// 🔐 Autenticación
-const LoginView = () => import('@/views/Login.vue')
-const RegisterView = () => import('@/views/Register.vue')
+// Auth Views
+const LoginView = () => import("@/views/Login.vue")
+const RegisterView = () => import("@/views/Register.vue")
 
-// 🚫 Página 404
-const NotFoundView = () => import('@/views/NotFoundView.vue')
+// Admin Views
+const DashboardView = () => import("@/views/admin/DashboardView.vue")
+const UsuariosAdminView = () => import("@/views/admin/UsuariosAdminView.vue")
+const CuponesAdminView = () => import("@/views/admin/CuponesAdminView.vue")
+const CategoriaAdminView = () => import("@/views/admin/CategoriaAdminView.vue")
+const DescuentosAdminView = () => import("@/views/admin/DescuentosAdminView.vue")
 
-const routes = [
-  // 🌍 Público
-  { path: '/', name: 'Inicio', component: HomeView, meta: { layout: 'user' } },
-  { path: '/cupones', name: 'Cupones', component: CuponesView, meta: { layout: 'user', title: 'Cupones Disponibles' } },
-  { path: '/descuentos', name: 'Descuentos', component: DescuentosView, meta: { layout: 'user' } },
-  { path: '/contactanos', name: 'Contactanos', component: ContactanosView, meta: { layout: 'user' } },
-  { path: '/noticias', name: 'Noticias', component: NoticiasView, meta: { layout: 'user' } },
-  { path: '/carrito', name: 'Carrito', component: CarritoView, meta: { layout: 'user' } },
-
-  // 🧑‍💼 Admin (🔒 con rol)
-  { path: '/admin/dashboard', name: 'Dashboard', component: DashboardView, meta: { layout: 'admin', requiresAuth: true, role: 'admin' } },
-  { path: '/admin/cupones', name: 'CuponesAdmin', component: CuponesAdminView, meta: { layout: 'admin', requiresAuth: true, role: 'admin' } },
-  { path: '/admin/categorias', name: 'CategoriasAdmin', component: CategoriaAdminView, meta: { layout: 'admin', requiresAuth: true, role: 'admin' } },
-  { path: '/admin/usuarios', name: 'UsuariosAdmin', component: UsuariosAdminView, meta: { layout: 'admin', requiresAuth: true, role: 'admin' } },
-  { path: '/admin/descuentos', name: 'DescuentosAdmin', component: DescuentosAdminView, meta: { layout: 'admin', requiresAuth: true, role: 'admin' } },
-
-  // 🔑 Login/Register
-  { path: '/login', name: 'Login', component: LoginView, meta: { layout: 'none', title: 'Iniciar Sesión' } },
-  { path: '/register', name: 'Register', component: RegisterView, meta: { layout: 'none', title: 'Registro' } },
-
-  // ❌ 404
-  { path: '/:pathMatch(.*)*', name: 'NotFound', component: NotFoundView, meta: { layout: 'user', title: 'Página no encontrada' } },
-]
+// Not Found
+const NotFoundView = () => import("@/views/NotFoundView.vue")
 
 const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
-  routes,
+  history: createWebHistory(),
+  routes: [
+    // Público
+    {
+      path: "/",
+      component: UserLayout,
+      children: [
+        { path: "", component: HomeView },
+        { path: "cupones", component: CuponesView },
+        { path: "contactanos", component: ContactanosView },
+        { path: "noticias", component: NoticiasView },
+        { path: "descuentos", component: DescuentosView },
+        { path: "carrito", component: CarritoView },
+      ],
+    },
+
+    // Login / Register
+    { path: "/login", component: LoginView },
+    { path: "/register", component: RegisterView },
+
+    // Admin
+    {
+      path: "/admin",
+      component: AdminLayout,
+      children: [
+        { path: "dashboard", component: DashboardView },
+        { path: "usuarios", component: UsuariosAdminView },
+        { path: "cupones", component: CuponesAdminView },
+        { path: "categorias", component: CategoriaAdminView },
+        { path: "descuentos", component: DescuentosAdminView },
+      ],
+    },
+
+    { path: "/:pathMatch(.*)*", component: NotFoundView },
+  ],
 })
 
-// ✅ Middleware global de autenticación + roles
+// ✅ GUARD SENCILLO
 router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('token')
-  let user = null
+  const token = localStorage.getItem("token")
+  const user = JSON.parse(localStorage.getItem("user") || "null")
+  const logged = !!token && !!user
+  const isAdmin = user?.role === "admin"
 
-  try {
-    user = JSON.parse(localStorage.getItem('user') || 'null')
-  } catch {
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
+  // Permitir siempre login y register
+  if (to.path === "/login" || to.path === "/register") {
+    if (!logged) return next()
+    return next(isAdmin ? "/admin/dashboard" : "/")
   }
 
-  const isLoggedIn = Boolean(token && user && user.email)
-  const role = String(user?.role || '').toLowerCase()
-
-  // ✅ Permitir login/registro si NO está logueado
-  if (!isLoggedIn && ['/login', '/register'].includes(to.path)) {
-    return next()
-  }
-
-  // 🚫 Rutas admin protegidas
-  if (to.meta.role === 'admin') {
-    if (!isLoggedIn) {
-      alert('🔒 Debes iniciar sesión para acceder al panel.')
-      return next('/login')
-    }
-    if (!role.includes('admin')) {
-      alert('🚫 Solo los administradores pueden acceder al panel.')
-      return next('/')
-    }
-  }
-
-  // 🔐 Rutas que requieren login
-  if (to.meta.requiresAuth && !isLoggedIn) {
-    return next('/login')
-  }
-
-  // 🚫 Usuario logueado intentando entrar a login/register
-  if (isLoggedIn && ['/login', '/register'].includes(to.path)) {
-    return next(role.includes('admin') ? '/admin/dashboard' : '/')
+  // Bloquear admin si no está logueado
+  if (to.path.startsWith("/admin")) {
+    if (!logged) return next("/login")
+    if (!isAdmin) return next("/")
   }
 
   next()
-})
-
-// 🧩 Título dinámico
-router.afterEach((to) => {
-  document.title = to.meta.title
-    ? `KingKang | ${to.meta.title}`
-    : 'KingKang Cuponera'
 })
 
 export default router

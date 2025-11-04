@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { HomeIcon, TagIcon, LayersIcon, UserRound, DollarSign, LogOut, Menu, X } from 'lucide-vue-next'
+import { HomeIcon, TagIcon, LayersIcon, UserRound, LogOut, Menu, X } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
-const isOpen = ref(false) // controla el menú mobile
+const auth = useAuthStore()
+
+const isOpen = ref(false)
 
 const menuItems = [
   { label: 'Inicio', icon: HomeIcon, path: '/admin/dashboard' },
@@ -15,20 +18,21 @@ const menuItems = [
 
 const activeTab = ref(menuItems[0].label)
 
-function handleLogout() {
-  alert('Sesión cerrada')
-  router.push('/')
-}
-
 function navigateTo(path: string, label: string) {
   activeTab.value = label
   router.push(path)
-  isOpen.value = false // cerrar menú en móvil al navegar
+  isOpen.value = false
+}
+
+function handleLogout() {
+  auth.logout()     // ✅ Borra token y usuario
+  router.push('/login') // ✅ Regresa al login
 }
 </script>
 
 <template>
   <div class="min-h-screen flex bg-gray-100 text-gray-800">
+
     <!-- Sidebar Desktop -->
     <aside class="hidden md:flex w-64 bg-white shadow-lg p-6 flex-col justify-between">
       <div>
@@ -50,7 +54,6 @@ function navigateTo(path: string, label: string) {
         </nav>
       </div>
 
-      <!-- Botón Cerrar Sesión -->
       <button
         @click="handleLogout"
         class="mt-6 flex items-center gap-3 px-4 py-3 rounded-lg text-red-600 font-semibold hover:bg-red-100 transition"
@@ -87,7 +90,6 @@ function navigateTo(path: string, label: string) {
             </nav>
           </div>
 
-          <!-- Botón Cerrar Sesión -->
           <button
             @click="handleLogout"
             class="mt-6 flex items-center gap-3 px-4 py-3 rounded-lg text-red-600 font-semibold hover:bg-red-100 transition"
@@ -101,19 +103,17 @@ function navigateTo(path: string, label: string) {
 
     <!-- Main content -->
     <main class="flex-1 w-full p-6 bg-gray-50 relative">
-      <!-- Topbar móvil -->
+
+      <!-- Mobile top bar -->
       <div class="md:hidden flex items-center justify-between mb-6">
-        <!-- Botón hamburguesa a la izquierda -->
         <button @click="isOpen = !isOpen" class="text-gray-700">
           <Menu v-if="!isOpen" class="w-7 h-7" />
           <X v-else class="w-7 h-7" />
         </button>
-
-        <!-- Título a la derecha -->
         <h1 class="text-xl font-bold text-blue-600 ml-auto">Admin Panel</h1>
       </div>
 
-      <!-- Aquí se cargan las vistas dinámicas -->
+      <!-- Views -->
       <RouterView />
     </main>
   </div>

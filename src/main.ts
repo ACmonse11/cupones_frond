@@ -16,7 +16,7 @@ app.use(router)
 
 // ✅ Inicializar autenticación ANTES de montar la app
 const auth = useAuthStore()
-auth.initializeAuth()
+
 
 // 🚀 Montar la app después de cargar la sesión
 app.mount('#app')
