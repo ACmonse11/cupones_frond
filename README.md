@@ -37,3 +37,10 @@ npm run build
 ```sh
 npm run lint
 ```
+
+### .env
+
+```sh
+APP_URL=http://127.0.0.1:8000
+FILESYSTEM_DISK=public
+```
