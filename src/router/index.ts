@@ -22,6 +22,8 @@ const UsuariosAdminView = () => import("@/views/admin/UsuariosAdminView.vue")
 const CuponesAdminView = () => import("@/views/admin/CuponesAdminView.vue")
 const CategoriaAdminView = () => import("@/views/admin/CategoriaAdminView.vue")
 const DescuentosAdminView = () => import("@/views/admin/DescuentosAdminView.vue")
+const BannersAdminView = () => import("@/views/admin/BannersAdminView.vue")
+const LogosAdminView = () => import("@/views/admin/LogoAdminView.vue")
 
 // Not Found
 const NotFoundView = () => import("@/views/NotFoundView.vue")
@@ -29,7 +31,7 @@ const NotFoundView = () => import("@/views/NotFoundView.vue")
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    // Público
+    // ▶ RUTAS PÚBLICAS
     {
       path: "/",
       component: UserLayout,
@@ -43,11 +45,11 @@ const router = createRouter({
       ],
     },
 
-    // Login / Register
+    // ▶ LOGIN Y REGISTRO
     { path: "/login", component: LoginView },
     { path: "/register", component: RegisterView },
 
-    // Admin
+    // ▶ RUTAS ADMIN (PROTEGIDAS)
     {
       path: "/admin",
       component: AdminLayout,
@@ -57,14 +59,19 @@ const router = createRouter({
         { path: "cupones", component: CuponesAdminView },
         { path: "categorias", component: CategoriaAdminView },
         { path: "descuentos", component: DescuentosAdminView },
+        { path: "banners", component: BannersAdminView },
+        { path: "logos", component: LogosAdminView },   // 👈 NUEVA RUTA
       ],
     },
 
+    // ▶ 404
     { path: "/:pathMatch(.*)*", component: NotFoundView },
   ],
 })
 
-// ✅ GUARD SENCILLO
+// ========================================================
+// 🔐 PROTECCIÓN DE RUTAS
+// ========================================================
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem("token")
   const user = JSON.parse(localStorage.getItem("user") || "null")
@@ -77,7 +84,7 @@ router.beforeEach((to, from, next) => {
     return next(isAdmin ? "/admin/dashboard" : "/")
   }
 
-  // Bloquear admin si no está logueado
+  // Bloquear admin si NO está logueado
   if (to.path.startsWith("/admin")) {
     if (!logged) return next("/login")
     if (!isAdmin) return next("/")

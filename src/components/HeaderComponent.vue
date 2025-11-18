@@ -1,50 +1,68 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import { ShoppingCart } from 'lucide-vue-next'
+import { useAuthStore } from "@/stores/auth"
 
 const isOpen = ref(false)
-const cartItemsCount = ref(3) // Cambiar dinámicamente según tu carrito
+const cartItemsCount = ref(3)
 
-// Cierra el menú cuando cambias de ruta
-const closeMenu = () => {
-  isOpen.value = false
+const closeMenu = () => (isOpen.value = false)
+
+const auth = useAuthStore()
+const router = useRouter()
+
+const cerrarSesion = async () => {
+  await auth.logout()
+  router.push("/login")
 }
 </script>
 
 <template>
   <header class="bg-white shadow-md sticky top-0 z-50">
-    <div class="max-w-7x2 mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16 border-b-2 border-[#569E4C]">
+    <div class="max-w-7xl mx-auto px-6 lg:px-10 flex justify-between items-center h-20 border-b border-gray-200">
 
       <!-- Logo principal -->
-     <RouterLink to="/" class="flex items-center">
-  <img
-    src="@/img/GMXC.jpg"
-    alt="Logo MiTienda"
-    class="h-15 w-15 object-cover rounded-full"
-  />
-</RouterLink>
+      <RouterLink to="/" class="flex items-center space-x-3">
+        <img
+          src="@/img/GASTA (1).png"
+          alt="Logo"
+          class="h-12 w-12 object-cover rounded-full shadow-md"
+        />
 
+      </RouterLink>
 
       <!-- Navegación principal (desktop) -->
-      <nav class="hidden md:flex space-x-6 text-[#569E4C] font-bold">
-        <RouterLink to="/" class="hover:text-[#134A00] transition">Inicio</RouterLink>
-        <RouterLink to="/descuentos" class="hover:text-[#134A00] transition">Descuentos</RouterLink>
-        <RouterLink to="/cupones" class="hover:text-[#134A00] transition">Cupones</RouterLink>
-        <RouterLink to="/Noticias" class="hover:text-[#134A00] transition">Blog</RouterLink>
-        <RouterLink to="/contactanos" class="hover:text-[#134A00] transition">Contacto</RouterLink>
+      <nav class="hidden md:flex space-x-8 text-gray-700 font-semibold">
+        <RouterLink to="/" class="hover:text-[#276796] transition-colors">Inicio</RouterLink>
+        <RouterLink to="/cupones" class="hover:text-[#276796] transition-colors">Cupones</RouterLink>
+        <RouterLink to="/descuentos" class="hover:text-[#276796] transition-colors">Descuentos</RouterLink>
+        <RouterLink to="/Noticias" class="hover:text-[#276796] transition-colors">Blog</RouterLink>
+        <RouterLink to="/contactanos" class="hover:text-[#276796] transition-colors">Contacto</RouterLink>
       </nav>
 
       <!-- Botones acción -->
-      <div class="flex items-center space-x-3">
+      <div class="flex items-center space-x-5">
+        <!-- Carrito -->
 
+
+        <!-- ✅ Si NO está logueado -->
         <RouterLink
-  to="/login"
-  class="hidden md:block font-medium bg-[#276796] text-white px-4 py-1 rounded-lg hover:bg-blue-700 transition"
->
-  Iniciar sesión
-</RouterLink>
+          v-if="!auth.isAuthenticated"
+          to="/login"
+          class="hidden md:block font-medium bg-[#276796] text-white px-5 py-2 rounded-full hover:bg-blue-700 transition"
+        >
+          Iniciar sesión
+        </RouterLink>
 
+        <!-- ✅ Si está logueado -->
+        <button
+          v-else
+          @click="cerrarSesion"
+          class="hidden md:block font-medium bg-red-600 text-white px-5 py-2 rounded-full hover:bg-red-700 transition"
+        >
+          Cerrar sesión
+        </button>
 
         <!-- Botón menú mobile -->
         <button @click="isOpen = !isOpen" class="md:hidden text-gray-600 focus:outline-none">
@@ -62,17 +80,30 @@ const closeMenu = () => {
     <transition name="fade">
       <div v-if="isOpen" class="md:hidden bg-white shadow-lg border-t border-gray-200">
         <nav class="flex flex-col px-6 py-6 space-y-4 text-gray-700 font-medium">
-          <RouterLink to="/" @click="closeMenu" class="hover:text-[#69BBF0] transition">Inicio</RouterLink>
-          <RouterLink to="/descuentos" @click="closeMenu" class="hover:text-[#69BBF0] transition">Descuentos</RouterLink>
-          <RouterLink to="/cupones" @click="closeMenu" class="hover:text-[#69BBF0] transition">Cupones</RouterLink>
-          <RouterLink to="/Noticias" @click="closeMenu" class="hover:text-[#69BBF0] transition">Noticias</RouterLink>
-          <RouterLink to="/contactanos" @click="closeMenu" class="hover:text-[#69BBF0] transition">Contacto</RouterLink>
-          <!-- Botón login móvil -->
-          <router-link to="/login">
-  Iniciar sesión
-</router-link>
+          <RouterLink to="/" @click="closeMenu" class="hover:text-[#276796] transition">Inicio</RouterLink>
+          <RouterLink to="/descuentos" @click="closeMenu" class="hover:text-[#276796] transition">Descuentos</RouterLink>
+          <RouterLink to="/cupones" @click="closeMenu" class="hover:text-[#276796] transition">Cupones</RouterLink>
+          <RouterLink to="/Noticias" @click="closeMenu" class="hover:text-[#276796] transition">Noticias</RouterLink>
+          <RouterLink to="/contactanos" @click="closeMenu" class="hover:text-[#276796] transition">Contacto</RouterLink>
 
+          <!-- ✅ Login si no está logueado -->
+          <RouterLink
+            v-if="!auth.isAuthenticated"
+            to="/login"
+            @click="closeMenu"
+            class="text-[#276796] font-semibold hover:text-blue-800"
+          >
+            Iniciar sesión
+          </RouterLink>
 
+          <!-- ✅ Logout si está logueado -->
+          <button
+            v-else
+            @click="() => { cerrarSesion(); closeMenu(); }"
+            class="text-red-600 font-bold hover:text-red-800"
+          >
+            Cerrar sesión
+          </button>
         </nav>
       </div>
     </transition>

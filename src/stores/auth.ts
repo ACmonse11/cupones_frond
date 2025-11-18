@@ -34,12 +34,21 @@ export const useAuthStore = defineStore('auth', {
       return data
     },
 
-    logout() {
-      this.token = null
-      this.user = null
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
-      delete api.defaults.headers.common['Authorization']
-    },
+    async logout() {
+  try {
+    await api.post("/logout");
+  } catch (e) {
+    // Si el token expiró o da error, igual limpiamos sesión
+  }
+
+  this.token = null;
+  this.user = null;
+
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+
+  delete api.defaults.headers.common['Authorization'];
+}
+
   },
 })

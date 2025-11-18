@@ -55,20 +55,23 @@ const cuponesFiltrados = computed(() => {
 </script>
 
 <template>
-  <div class="px-4 py-8 max-w-6xl mx-auto">
-    <h1 class="text-3xl font-bold mb-8 text-[#276796] text-center">
+  <div class="px-4 py-12 max-w-7xl mx-auto">
+    <!-- Título -->
+    <h1 class="text-4xl font-extrabold mb-10 text-[#276796] text-center tracking-wide">
       💸 Descuentos Especiales
     </h1>
 
     <!-- 🔍 Filtro de descuento -->
-    <div class="mb-8 flex flex-col sm:flex-row sm:items-center gap-4">
-      <label for="descuento" class="text-sm font-medium text-gray-700">
+    <div
+      class="mb-12 flex flex-col sm:flex-row sm:items-center gap-4 bg-white shadow-md rounded-xl p-6 border border-gray-200"
+    >
+      <label for="descuento" class="text-sm font-semibold text-gray-700">
         Filtrar por rango de descuento:
       </label>
       <select
         id="descuento"
         v-model.number="descuentoSeleccionado"
-        class="block w-full sm:w-60 p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#69BBF0] outline-none"
+        class="block w-full sm:w-60 p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#276796] focus:border-[#276796] outline-none transition"
       >
         <option :value="0">Todos</option>
         <option :value="10">10% o más</option>
@@ -80,67 +83,68 @@ const cuponesFiltrados = computed(() => {
     </div>
 
     <!-- Estado de carga -->
-    <div v-if="loading" class="text-center text-gray-500 py-10">
-      Cargando descuentos...
+    <div v-if="loading" class="text-center text-gray-500 py-16 text-lg font-medium">
+      ⏳ Cargando descuentos...
     </div>
 
     <!-- Error -->
-    <div v-else-if="error" class="text-center text-red-500 py-10">
+    <div v-else-if="error" class="text-center text-red-600 py-16 text-lg font-semibold">
       {{ error }}
     </div>
 
     <!-- 🧾 Lista de cupones -->
     <div
       v-else-if="cuponesFiltrados.length > 0"
-      class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
+      class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8"
     >
       <div
         v-for="cupon in cuponesFiltrados"
         :key="cupon.id"
-        class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden hover:shadow-lg transition transform hover:-translate-y-1 flex flex-col"
+        class="bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-xl transition transform hover:-translate-y-2 flex flex-col"
       >
         <!-- Imagen -->
-        <div class="w-full h-40 bg-gray-100 flex items-center justify-center">
+        <div class="w-full h-44 bg-gray-100 flex items-center justify-center relative">
           <img
             v-if="cupon.image"
             :src="cupon.image.startsWith('http')
               ? cupon.image
               : `http://127.0.0.1:8000/storage/${cupon.image}`"
             alt="Imagen del cupón"
-            class="w-full h-40 object-cover"
+            class="w-full h-44 object-contain"
           />
           <span v-else class="text-gray-400 text-sm italic">Sin imagen</span>
-        </div>
 
-        <!-- Contenido -->
-        <div class="p-4 flex flex-col flex-1">
-          <h2 class="text-lg font-semibold text-gray-800 line-clamp-1">
-            {{ cupon.title }}
-          </h2>
-          <p class="text-gray-600 mt-1 text-sm line-clamp-2">
-            {{ cupon.description }}
-          </p>
-
+          <!-- Badge descuento -->
           <span
-            class="inline-block mt-3 bg-green-100 text-green-800 text-sm font-bold px-3 py-1 rounded-full"
+            class="absolute top-3 left-3 bg-[#f73b3b] text-white text-xs font-bold px-3 py-1 rounded-full shadow-md"
           >
             {{ cupon.discount }}% OFF
           </span>
+        </div>
 
-          <p class="mt-2 text-xs text-gray-500">
-            Vence: {{ new Date(cupon.expiration_date).toLocaleDateString() }}
+        <!-- Contenido -->
+        <div class="p-5 flex flex-col flex-1">
+          <h2 class="text-lg font-bold text-gray-800 line-clamp-1">
+            {{ cupon.title }}
+          </h2>
+          <p class="text-gray-600 mt-2 text-sm line-clamp-2">
+            {{ cupon.description }}
           </p>
 
-          <p class="text-xs text-gray-400 mt-auto">
-            {{ cupon.category?.name || "Sin categoría" }}
+          <p class="mt-3 text-xs text-gray-500">
+            🗓 Vence: {{ new Date(cupon.expiration_date).toLocaleDateString() }}
+          </p>
+
+          <p class="text-xs text-gray-400 mt-auto italic">
+            📂 {{ cupon.category?.name || "Sin categoría" }}
           </p>
         </div>
       </div>
     </div>
 
     <!-- Sin resultados -->
-    <div v-else class="mt-8 text-center text-gray-500 italic">
-      No hay cupones que coincidan con el rango de descuento seleccionado.
+    <div v-else class="mt-12 text-center text-gray-500 italic text-lg">
+      🚫 No hay cupones que coincidan con el rango de descuento seleccionado.
     </div>
   </div>
 </template>

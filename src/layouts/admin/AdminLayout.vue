@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { HomeIcon, TagIcon, LayersIcon, UserRound, LogOut, Menu, X } from 'lucide-vue-next'
+import { HomeIcon, TagIcon, LayersIcon, UserRound, LogOut, Menu, X , Image} from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
@@ -13,7 +13,9 @@ const menuItems = [
   { label: 'Inicio', icon: HomeIcon, path: '/admin/dashboard' },
   { label: 'Usuarios', icon: UserRound, path: '/admin/usuarios' },
   { label: 'Cupones', icon: TagIcon, path: '/admin/cupones' },
-  { label: 'Categorías', icon: LayersIcon, path: '/admin/categorias' }
+  { label: 'Categorías', icon: LayersIcon, path: '/admin/categorias' },
+  { label: 'Banners', icon: Image, path: '/admin/banners' },
+  { label: 'Logos', icon: Image, path: '/admin/logos' },
 ]
 
 const activeTab = ref(menuItems[0].label)
