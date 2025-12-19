@@ -252,40 +252,99 @@ function prevPage() {
     </div>
 
     <!-- Modal -->
-    <div v-if="showModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div class="bg-white rounded-xl w-full max-w-lg shadow-xl">
-        <div class="p-5 border-b">
-          <h2 class="text-lg font-semibold">{{ isEditing ? "Editar Cupón" : "Nuevo Cupón" }}</h2>
-        </div>
+   <div
+  v-if="showModal"
+  class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4"
+>
+  <div
+    class="bg-white rounded-xl w-full sm:w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto"
+  >
+    <!-- Header -->
+    <div class="p-4 sm:p-5 border-b">
+      <h2 class="text-lg font-semibold">
+        {{ isEditing ? "Editar Cupón" : "Nuevo Cupón" }}
+      </h2>
+    </div>
 
-        <div class="p-5 grid gap-4">
-          <input v-model="form.title" placeholder="Título" class="border rounded-lg px-3 py-2" />
-          <input v-model="form.code" placeholder="Código (opcional)" class="border rounded-lg px-3 py-2" />
-          <textarea v-model="form.description" placeholder="Descripción" class="border rounded-lg px-3 py-2"></textarea>
-          <input type="number" v-model="form.discount" placeholder="Descuento %" class="border rounded-lg px-3 py-2" />
-          <input type="date" v-model="form.expiration_date" class="border rounded-lg px-3 py-2" />
+    <!-- Formulario -->
+    <div class="p-4 sm:p-5 grid gap-4">
+      <input
+        v-model="form.title"
+        placeholder="Título"
+        class="border rounded-lg px-3 py-2 w-full"
+      />
 
-          <select v-model="form.category_id" class="border rounded-lg px-3 py-2">
-            <option value="">Sin categoría</option>
-            <option v-for="cat in categories" :value="cat.id">{{ cat.name }}</option>
-          </select>
+      <input
+        v-model="form.code"
+        placeholder="Código (opcional)"
+        class="border rounded-lg px-3 py-2 w-full"
+      />
 
-          <select v-model="form.status" class="border rounded-lg px-3 py-2">
-            <option value="Activo">Activo</option>
-            <option value="Inactivo">Inactivo</option>
-          </select>
+      <textarea
+        v-model="form.description"
+        placeholder="Descripción"
+        class="border rounded-lg px-3 py-2 w-full"
+      ></textarea>
 
-          <div>
-            <input type="file" @change="handleFileUpload" class="border rounded-lg px-3 py-2" />
-            <img v-if="imagePreview" :src="imagePreview" class="w-32 h-32 mt-2 object-cover rounded-lg border" />
-          </div>
-        </div>
+      <input
+        type="number"
+        v-model="form.discount"
+        placeholder="Descuento %"
+        class="border rounded-lg px-3 py-2 w-full"
+      />
 
-        <div class="flex justify-end gap-2 p-4 border-t">
-          <button @click="closeModal" class="px-4 py-2 border rounded-lg">Cancelar</button>
-          <button @click="saveCoupon" class="px-4 py-2 bg-blue-600 text-white rounded-lg">Guardar</button>
-        </div>
+      <input
+        type="date"
+        v-model="form.expiration_date"
+        class="border rounded-lg px-3 py-2 w-full"
+      />
+
+      <select
+        v-model="form.category_id"
+        class="border rounded-lg px-3 py-2 w-full"
+      >
+        <option value="">Sin categoría</option>
+        <option v-for="cat in categories" :value="cat.id">{{ cat.name }}</option>
+      </select>
+
+      <select
+        v-model="form.status"
+        class="border rounded-lg px-3 py-2 w-full"
+      >
+        <option value="Activo">Activo</option>
+        <option value="Inactivo">Inactivo</option>
+      </select>
+
+      <div>
+        <input
+          type="file"
+          @change="handleFileUpload"
+          class="border rounded-lg px-3 py-2 w-full"
+        />
+
+        <img
+          v-if="imagePreview"
+          :src="imagePreview"
+          class="w-32 h-32 mt-2 object-cover rounded-lg border"
+        />
       </div>
     </div>
+
+    <!-- Footer -->
+    <div class="flex flex-col sm:flex-row justify-end gap-2 p-4 border-t">
+      <button @click="closeModal" class="px-4 py-2 border rounded-lg w-full sm:w-auto">
+        Cancelar
+      </button>
+
+      <button
+        @click="saveCoupon"
+        class="px-4 py-2 bg-blue-600 text-white rounded-lg w-full sm:w-auto"
+      >
+        Guardar
+      </button>
+    </div>
+  </div>
+</div>
+
   </div>
 </template>

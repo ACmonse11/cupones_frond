@@ -24,6 +24,7 @@ const CategoriaAdminView = () => import("@/views/admin/CategoriaAdminView.vue")
 const DescuentosAdminView = () => import("@/views/admin/DescuentosAdminView.vue")
 const BannersAdminView = () => import("@/views/admin/BannersAdminView.vue")
 const LogosAdminView = () => import("@/views/admin/LogoAdminView.vue")
+const CouponStatsView = () => import("@/views/admin/CouponStatsView.vue")
 
 // Not Found
 const NotFoundView = () => import("@/views/NotFoundView.vue")
@@ -61,6 +62,7 @@ const router = createRouter({
         { path: "descuentos", component: DescuentosAdminView },
         { path: "banners", component: BannersAdminView },
         { path: "logos", component: LogosAdminView },   // 👈 NUEVA RUTA
+        { path: "estadisticas-cupones", component: CouponStatsView }, // 👈 NUEVA RUTA
       ],
     },
 

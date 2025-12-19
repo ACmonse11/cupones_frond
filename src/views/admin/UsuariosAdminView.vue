@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed, watch, onMounted } from 'vue'
-import { UserPlus, Pencil, Trash2, ChevronLeft, ChevronRight, Search } from 'lucide-vue-next'
+import { UserPlus, Pencil, Trash2, Search } from 'lucide-vue-next'
 import { getUsers, createUser, updateUser, deleteUser } from '@/api/users'
 
 // ===== Tipos =====

@@ -16,6 +16,7 @@ const menuItems = [
   { label: 'Categorías', icon: LayersIcon, path: '/admin/categorias' },
   { label: 'Banners', icon: Image, path: '/admin/banners' },
   { label: 'Logos', icon: Image, path: '/admin/logos' },
+  { label: 'Estadísticas Cupones', icon: TagIcon, path: '/admin/estadisticas-cupones' },
 ]
 
 const activeTab = ref(menuItems[0].label)
