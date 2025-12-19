@@ -1,10 +1,9 @@
-<!-- src/views/CuponesView.vue -->
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
 import axios from "axios";
 import jsPDF from "jspdf";
+import logo from "@/assets/logo.png";
 
-// --- Tipos ---
 interface Category {
   id: number;
   name: string;
@@ -17,182 +16,270 @@ interface Coupon {
   discount: number;
   expiration_date: string;
   status: "Activo" | "Inactivo";
-  image?: string;
+  image?: string | null;
   category?: Category;
   code?: string;
 }
 
-// --- Estado ---
 const cupones = ref<Coupon[]>([]);
 const categorias = ref<string[]>([]);
 const categoriaSeleccionada = ref("");
 const loading = ref(false);
 const error = ref<string | null>(null);
+const isLogged = ref(!!localStorage.token);
 
-// --- API ---
 const API_URL = "http://127.0.0.1:8000/api/coupons";
 
-// --- Obtener cupones ---
 onMounted(async () => {
   try {
     loading.value = true;
     const res = await axios.get(API_URL);
     cupones.value = res.data.filter((c: Coupon) => c.status === "Activo");
 
-    const categoriasUnicas = new Set<string>();
+    const cats = new Set<string>();
     cupones.value.forEach((c) => {
-      if (c.category?.name) categoriasUnicas.add(c.category.name);
+      if (c.category?.name) cats.add(c.category.name);
     });
-    categorias.value = Array.from(categoriasUnicas);
-  } catch (err: any) {
-    console.error("Error cargando cupones:", err);
+    categorias.value = [...cats];
+  } catch {
     error.value = "No se pudieron cargar los cupones.";
   } finally {
     loading.value = false;
   }
 });
 
-// --- Filtrar por categoría ---
-const cuponesFiltrados = computed(() => {
-  if (!categoriaSeleccionada.value) return cupones.value;
-  return cupones.value.filter(
-    (c) => c.category?.name === categoriaSeleccionada.value
-  );
-});
+const cuponesFiltrados = computed(() =>
+  categoriaSeleccionada.value
+    ? cupones.value.filter((c) => c.category?.name === categoriaSeleccionada.value)
+    : cupones.value
+);
 
-// --- Descargar PDF ---
-function descargarPDF(cupon: Coupon) {
-  const doc = new jsPDF();
+// -------------------------------------------------
+// 🔥 DESCARGAR PDF + Registrar descarga
+// -------------------------------------------------
+async function descargarPDF(cupon: Coupon) {
+
+  if (isLogged.value) {
+    try {
+      await axios.post(
+        `http://127.0.0.1:8000/api/coupon/${cupon.id}/download`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.token}`,
+          },
+        }
+      );
+    } catch (e: any) {
+      // ❌ SI YA DESCARGÓ, CORTAR EL PROCESO Y NO GENERAR PDF
+      if (e.response && e.response.status === 400) {
+        alert("Ya descargaste este cupón. Solo se permite una descarga.");
+        return;
+      }
+
+      console.warn("No se pudo registrar la descarga:", e);
+      return;
+    }
+  }
+
+  // -------------------------------------------------
+  // 🔥 2) GENERAR PDF — SOLO SI EL USUARIO NO DESCARGÓ ANTES
+  // -------------------------------------------------
+  const doc = new jsPDF("p", "mm", "a4");
+
   const folio = `FOLIO-${String(cupon.id).padStart(4, "0")}`;
-  const fechaVence = new Date(cupon.expiration_date).toLocaleDateString();
+  const primary = "#276796";
+  const gray = "#555";
 
-  // --- Encabezado ---
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(20);
-  doc.text("CUPÓN DIGITAL", 70, 20);
+  // ENCABEZADO
+  doc.setFillColor(primary);
+  doc.rect(0, 0, 210, 40, "F");
 
-  // --- Información principal ---
-  doc.setFontSize(12);
-  doc.text(`Folio: ${folio}`, 20, 40);
-  doc.text(`Código: ${cupon.code || "N/A"}`, 20, 50);
-  doc.text(`Título: ${cupon.title}`, 20, 60);
-  doc.text(`Categoría: ${cupon.category?.name || "Sin categoría"}`, 20, 70);
-  doc.text(`Descuento: ${cupon.discount}% OFF`, 20, 80);
-  doc.text(`Vence el: ${fechaVence}`, 20, 90);
+  const logoImg = new Image();
+  logoImg.src = logo;
 
-  // --- Descripción ---
-  doc.setFont("helvetica", "normal");
-  doc.text("Descripción:", 20, 105);
-  doc.text(cupon.description || "Sin descripción", 20, 115, { maxWidth: 170 });
-
-  // --- Imagen (si existe) ---
-  if (cupon.image) {
-    const img = new Image();
-    img.src = cupon.image.startsWith("http")
-      ? cupon.image
-      : `http://127.0.0.1:8000/storage/${cupon.image}`;
-
-    img.onload = () => {
-      doc.addImage(img, "JPEG", 60, 130, 90, 60);
-      doc.save(`Cupon_${folio}.pdf`);
+  await new Promise((resolve) => {
+    logoImg.onload = () => {
+      doc.addImage(logoImg, "PNG", 80, 5, 50, 30);
+      resolve(true);
     };
+  });
+
+  doc.setFontSize(22);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(primary);
+  doc.text("Cupón Digital", 70, 60);
+
+  doc.setDrawColor(primary);
+  doc.setLineWidth(1);
+  doc.roundedRect(15, 70, 180, 160, 5, 5);
+
+  let y = 85;
+
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.text("Detalles del cupón", 20, y);
+  y += 10;
+
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(gray);
+
+  doc.text(` Folio: ${folio}`, 20, y); y += 8;
+  doc.text(` Código: ${cupon.code}`, 20, y); y += 8;
+  doc.text(` Título: ${cupon.title}`, 20, y); y += 8;
+
+  // ⭐ CORREGIDO → si no tiene descuento, mostrar "Sin descuento"
+  if (cupon.discount && cupon.discount > 0) {
+    doc.text(` Descuento: ${cupon.discount}%`, 20, y);
   } else {
-    doc.text("Sin imagen disponible", 70, 150);
+    doc.text(` Descuento: Sin descuento`, 20, y);
+  }
+  y += 8;
+
+  doc.text(
+    ` Vence el: ${new Date(cupon.expiration_date).toLocaleDateString()}`,
+    20,
+    y
+  );
+
+  y += 12;
+
+  doc.setDrawColor("#cccccc");
+  doc.line(20, y, 190, y);
+  y += 10;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(13);
+  doc.setTextColor(primary);
+  doc.text("Imagen del cupón", 20, y);
+  y += 8;
+
+  if (cupon.image) {
+    try {
+      const res = await fetch(cupon.image);
+      const blob = await res.blob();
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64 = reader.result as string;
+
+        const img = new Image();
+        img.src = base64;
+
+        img.onload = () => {
+          doc.addImage(img, "JPEG", 40, y, 130, 80);
+
+          doc.setFont("helvetica", "italic");
+          doc.setFontSize(10);
+          doc.setTextColor(gray);
+          doc.text("Presenta este cupón en el establecimiento.", 40, 260);
+          doc.text("Gasta y Gana © 2025", 80, 270);
+
+          doc.save(`Cupon_${folio}.pdf`);
+        };
+      };
+
+      reader.readAsDataURL(blob);
+    } catch {
+      doc.text("Error cargando imagen", 20, y);
+      doc.save(`Cupon_${folio}.pdf`);
+    }
+  } else {
+    doc.text("Este cupón no contiene imagen.", 20, y);
     doc.save(`Cupon_${folio}.pdf`);
   }
 }
+
 </script>
 
 <template>
-  <div class="px-4 py-8 max-w-6xl mx-auto">
-    <h1 class="text-3xl font-bold mb-8 text-[#276796] text-center">
+  <div class="px-4 py-12 max-w-7xl mx-auto">
+    <h1 class="text-4xl font-extrabold text-center mb-10 text-[#276796] tracking-wide">
       🎟️ Cupones Disponibles
     </h1>
 
-    <!-- Filtro -->
-    <div
-      class="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-start gap-4"
-    >
-      <label for="categoria" class="text-sm font-medium text-gray-700">
-        Selecciona una categoría:
-      </label>
+    <div class="mb-10 flex flex-col sm:flex-row sm:items-center gap-4 bg-white shadow-md rounded-xl p-6 border border-gray-200">
+      <label for="categoria" class="text-sm font-semibold text-gray-700">Filtrar por categoría:</label>
+
       <select
         id="categoria"
         v-model="categoriaSeleccionada"
-        class="block w-full sm:w-60 p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#69BBF0] outline-none"
+        class="block w-full sm:w-60 p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#276796] focus:border-[#276796]"
       >
         <option value="">Todas</option>
-        <option v-for="categoria in categorias" :key="categoria" :value="categoria">
-          {{ categoria }}
-        </option>
+        <option v-for="c in categorias" :key="c" :value="c">{{ c }}</option>
       </select>
     </div>
 
-    <!-- Estado -->
-    <div v-if="loading" class="text-center text-gray-500 py-10">
-      Cargando cupones...
+    <div v-if="loading" class="text-center text-gray-500 py-16 text-lg font-medium">
+      ⏳ Cargando cupones...
     </div>
 
-    <div v-else-if="error" class="text-center text-red-500 py-10">
+    <div v-else-if="error" class="text-center text-red-600 py-16 text-lg font-semibold">
       {{ error }}
     </div>
 
-    <!-- Cupones -->
     <div
       v-else-if="cuponesFiltrados.length > 0"
-      class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
+      class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8"
     >
       <div
         v-for="cupon in cuponesFiltrados"
         :key="cupon.id"
-        class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden hover:shadow-lg transition transform hover:-translate-y-1 flex flex-col"
+        class="bg-white rounded-2xl shadow-md hover:shadow-xl transition transform hover:-translate-y-2 overflow-hidden flex flex-col"
       >
-        <!-- Imagen -->
-        <div class="w-full h-40 bg-gray-100 flex items-center justify-center">
+        <div class="w-full h-44 bg-gray-100 flex items-center justify-center relative">
           <img
             v-if="cupon.image"
-            :src="cupon.image.startsWith('http') ? cupon.image : `http://127.0.0.1:8000/storage/${cupon.image}`"
+            :src="cupon.image"
+            class="w-full h-44 object-contain"
             alt="Imagen del cupón"
-            class="w-full h-40 object-cover"
           />
           <span v-else class="text-gray-400 text-sm italic">Sin imagen</span>
+
+          <!-- ⭐ CORREGIDO → mostrar badge SOLO si tiene descuento -->
+          <span
+            v-if="cupon.discount && cupon.discount > 0"
+            class="absolute top-3 left-3 bg-[#f73b3b] text-white text-xs font-bold px-3 py-1 rounded-full shadow-md"
+          >
+            {{ cupon.discount }}% OFF
+          </span>
         </div>
 
-        <!-- Contenido -->
-        <div class="p-4 flex flex-col flex-1">
-          <h2 class="text-lg font-semibold text-gray-800 line-clamp-1">
+        <div class="p-5 flex flex-col flex-1">
+          <h2 class="text-lg font-bold text-gray-800 line-clamp-1">
             {{ cupon.title }}
           </h2>
-          <p class="text-gray-600 mt-1 text-sm line-clamp-2">
+
+          <p class="text-sm text-gray-600 mt-2 line-clamp-2">
             {{ cupon.description }}
           </p>
 
-          <p
-            class="mt-3 bg-green-100 text-green-800 text-xs font-medium px-3 py-1 rounded-full inline-block w-max"
-          >
-            {{ cupon.discount }}% OFF
+          <p class="mt-3 text-xs text-gray-500">
+            🗓 Vence: {{ new Date(cupon.expiration_date).toLocaleDateString() }}
           </p>
 
-          <p class="mt-2 text-xs text-gray-500">
-            Vence: {{ new Date(cupon.expiration_date).toLocaleDateString() }}
-          </p>
-
-          <p class="text-xs text-gray-400 mb-3">
-            {{ cupon.category?.name || "Sin categoría" }}
+          <p class="text-xs text-gray-400 italic mt-auto">
+            📂 {{ cupon.category?.name || "Sin categoría" }}
           </p>
 
           <button
+            v-if="isLogged"
             @click="descargarPDF(cupon)"
-            class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-4 rounded-lg shadow transition"
+            class="mt-4 w-full bg-[#276796] text-white py-2 rounded-full font-semibold hover:bg-green-700 transition-colors"
           >
-            Descargar PDF
+            📥 Descargar PDF
           </button>
+
+          <p v-else class="mt-4 text-center text-gray-500 text-sm">
+            Inicia sesión para descargar este cupón.
+          </p>
         </div>
       </div>
     </div>
 
-    <div v-else class="mt-8 text-center text-gray-500 italic">
-      No hay cupones en esta categoría.
+    <div v-else class="mt-12 text-center text-gray-500 italic text-lg">
+      🚫 No hay cupones disponibles en esta categoría.
     </div>
   </div>
 </template>
@@ -209,12 +296,5 @@ function descargarPDF(cupon: Coupon) {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-}
-
-button {
-  transition: all 0.2s ease;
-}
-button:hover {
-  transform: scale(1.03);
 }
 </style>

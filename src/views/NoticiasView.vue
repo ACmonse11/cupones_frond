@@ -34,39 +34,39 @@ const enviarRecomendacion = () => {
   calificacion.value = 0;
 };
 </script>
-
 <template>
-  <div class="flex justify-center px-4 py-8">
-    <div class="w-full max-w-xl">
-      <h1 class="text-2xl font-bold text-center text-blue-600 mb-6">
-        Recomendaciones de la página de cupones
+  <div class="flex justify-center px-4 py-12 bg-gray-50 min-h-screen">
+    <div class="w-full max-w-2xl">
+      <!-- Título principal -->
+      <h1 class="text-4xl font-extrabold text-center text-[#276796] mb-10 tracking-wide">
+        ⭐ Recomendaciones de nuestros usuarios
       </h1>
 
       <!-- Formulario -->
-      <div class="bg-white shadow-md rounded-lg p-5 mb-8">
-        <h2 class="text-lg font-semibold mb-4">Deja tu comentario</h2>
+      <div class="bg-white shadow-lg rounded-2xl p-8 mb-12 border border-gray-200">
+        <h2 class="text-xl font-semibold mb-6 text-gray-800">Deja tu comentario</h2>
 
         <input
           v-model="nombre"
           type="text"
           placeholder="Tu nombre"
-          class="w-full mb-3 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          class="w-full mb-4 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#276796] transition"
         />
 
         <textarea
           v-model="comentario"
-          rows="3"
+          rows="4"
           placeholder="Escribe tu comentario..."
-          class="w-full mb-3 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          class="w-full mb-4 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#276796] transition"
         ></textarea>
 
         <!-- Calificación -->
-        <div class="flex items-center mb-4 space-x-1">
+        <div class="flex items-center mb-6 space-x-2">
           <span
             v-for="n in 5"
             :key="n"
             @click="setRating(n)"
-            class="cursor-pointer text-xl"
+            class="cursor-pointer text-2xl transition"
             :class="n <= calificacion ? 'text-yellow-400' : 'text-gray-300'"
           >
             ★
@@ -75,35 +75,36 @@ const enviarRecomendacion = () => {
 
         <button
           @click="enviarRecomendacion"
-          class="bg-indigo-500 hover:bg-indigo-600 text-white px-5 py-2 rounded-lg transition"
+          class="w-full bg-[#276796] hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg shadow-md transition"
         >
-          Enviar
+          Enviar recomendación
         </button>
       </div>
 
       <!-- Lista de recomendaciones -->
       <div>
-        <h2 class="text-lg font-semibold mb-4">Comentarios recientes</h2>
+        <h2 class="text-xl font-semibold mb-6 text-gray-800">💬 Comentarios recientes</h2>
+
         <div
           v-if="recomendaciones.length === 0"
-          class="text-gray-500 italic"
+          class="text-gray-500 italic text-center py-6"
         >
-          No hay recomendaciones aún.
+          No hay recomendaciones aún. ¡Sé el primero en dejar tu comentario!
         </div>
 
         <div
           v-for="(rec, index) in recomendaciones"
           :key="index"
-          class="bg-gray-50 border rounded-lg p-3 mb-3 shadow-sm"
+          class="bg-white border border-gray-200 rounded-xl p-6 mb-6 shadow-sm hover:shadow-md transition"
         >
-          <div class="flex justify-between items-center mb-1">
-            <span class="font-semibold">{{ rec.nombre }}</span>
+          <div class="flex justify-between items-center mb-2">
+            <span class="font-bold text-gray-800">{{ rec.nombre }}</span>
             <span class="text-xs text-gray-400">{{ rec.fecha }}</span>
           </div>
-          <div class="flex text-yellow-400 mb-1 text-sm">
+          <div class="flex text-yellow-400 mb-2 text-lg">
             <span v-for="n in rec.calificacion" :key="n">★</span>
           </div>
-          <p class="text-gray-700 text-sm">{{ rec.comentario }}</p>
+          <p class="text-gray-700 text-sm leading-relaxed">{{ rec.comentario }}</p>
         </div>
       </div>
     </div>

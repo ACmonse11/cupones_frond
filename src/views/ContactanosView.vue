@@ -118,7 +118,7 @@
   </section>
 </template>
 
-<script setup  >
+<script setup>
 import { ref, onMounted } from 'vue'
 import imagenContacto from '../img/Imagen23.jpg'
 
@@ -134,7 +134,6 @@ const error = ref('')
 const loading = ref(false)
 const errors = ref({})
 
-// 🔹 Esto hará que siempre que entres a esta vista se vaya arriba
 onMounted(() => {
   window.scrollTo({ top: 0, behavior: 'smooth' })
 })
@@ -142,7 +141,10 @@ onMounted(() => {
 const enviarFormulario = async () => {
   errors.value = {}
   loading.value = true
+  exito.value = false
+  error.value = ''
 
+  // Validaciones
   if (!form.value.nombre.trim())
     errors.value.nombre = 'El nombre es requerido.'
   if (!form.value.correo.trim())
@@ -156,19 +158,31 @@ const enviarFormulario = async () => {
 
   if (Object.keys(errors.value).length === 0) {
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-      console.log('Formulario enviado:', form.value)
+      const res = await fetch('http://127.0.0.1:8000/api/contacto', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombre: form.value.nombre,
+          email: form.value.correo,
+          asunto: form.value.asunto,
+          mensaje: form.value.mensaje
+        })
+      })
+
+      if (!res.ok) throw new Error('Error al enviar el mensaje.')
+
       exito.value = true
-      error.value = ''
+
       form.value = { nombre: '', correo: '', asunto: '', mensaje: '' }
     } catch (err) {
-      error.value = 'Error al enviar el mensaje. Intenta de nuevo.'
+      error.value = 'No se pudo enviar el mensaje. Inténtalo de nuevo.'
     }
   }
 
   loading.value = false
 }
 </script>
+
 
 <style scoped>
 .animate-fade-in {
